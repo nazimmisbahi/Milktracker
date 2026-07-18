@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>دودھ کا حساب کتاب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --card:#FFFFFF;
+    --border:#EAE3D3;
+    --ink:#2B2B2B;
+    --muted:#8a8272;
+    --muted2:#6b6355;
+    --green:#2f7a4f;
+    --blue:#2f5d8a;
+    --header-bg:#EFE6D3;
+    --header-border:#DCCFAE;
+    --danger:#b5453a;
+  }
+  *{box-sizing:border-box;}
+  html,body{ height:100%; margin:0; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Naskh Arabic', serif;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .nastaliq{ font-family:'Noto Nastaliq Urdu', serif; }
+
+  /* ---------- Login screen ---------- */
+  #loginScreen{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100%;
+    padding:20px;
+  }
+  .login-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:26px 22px;
+    width:100%;
+    max-width:340px;
+    text-align:center;
+    box-shadow:0 4px 18px rgba(0,0,0,0.06);
+  }
+  .login-card h1{
+    font-size:22px;
+    color:#2f4d3a;
+    margin:0 0 6px;
+  }
+  .login-sub{
+    font-size:13px;
+    color:var(--muted2);
+    margin:0 0 18px;
+  }
+  .login-card input{
+    width:100%;
+    font-size:14px;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    font-family:inherit;
+    margin-bottom:10px;
+  }
+  .login-card input:focus{ outline:none; border-color:#3E7C59; }
+  #authError{
+    font-size:12px;
+    color:var(--danger);
+    min-height:16px;
+    margin-bottom:6px;
+  }
+  .auth-btn{
+    width:100%;
+    font-size:14px;
+    font-weight:600;
+    padding:11px;
+    border-radius:10px;
+    border:none;
+    font-family:inherit;
+    margin-top:6px;
+  }
+  .auth-btn.primary{ background:#3E7C59; color:#fff; }
+  .auth-btn.secondary{ background:var(--header-bg); color:#2f4d3a; border:1px solid var(--header-border); }
+
+  /* ---------- App screen ---------- */
+  #appScreen{
+    display:none;
+    flex-direction:column;
+    height:100%;
+    overflow:hidden;
+  }
+  #appScreen.show{ display:flex; }
+
+  /* ---------- Header ---------- */
+  header{
+    background:var(--header-bg);
+    border-bottom:1px solid var(--header-border);
+    padding:10px 14px 8px;
+    flex-shrink:0;
+  }
+  header h1{
+    margin:0;
+    font-size:19px;
+    color:#2f4d3a;
+    font-family:'Noto Nastaliq Urdu', serif;
+  }
+  .header-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  #logoutBtn{
+    font-size:11px;
+    padding:5px 10px;
+    border-radius:8px;
+    border:1px solid var(--header-border);
+    background:#fff;
+    color:var(--muted2);
+    white-space:nowrap;
+    font-family:inherit;
+  }
+  .price-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+  }
+  .price-row label{ font-size:11px; color:var(--muted2); white-space:nowrap; }
+  .price-row input{
+    width:70px; font-size:14px; padding:5px 8px; border-radius:8px;
+    border:1px solid var(--border); background:#fff; font-family:inherit;
+  }
+  .price-row button{
+    font-size:12px; padding:6px 12px; border-radius:8px; border:none;
+    background:#3E7C59; color:#fff;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex;
+    background:var(--card);
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .tab-btn{
+    flex:1; text-align:center; padding:10px 4px;
+    font-size:14px; font-weight:600; color:var(--muted);
+    background:none; border:none; border-bottom:3px solid transparent;
+    font-family:inherit;
+  }
+  .tab-btn.active{ color:#2f4d3a; border-bottom-color:#3E7C59; }
+
+  /* ---------- Main scroll area ---------- */
+  main{
+    flex:1;
+    overflow-y:auto;
+    padding:10px 12px 16px;
+    max-width:460px;
+    margin:0 auto;
+    width:100%;
+  }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:12px;
+  }
+
+  /* ---------- Month nav ---------- */
+  .month-nav{ display:flex; align-items:center; justify-content:space-between; padding:2px 4px; }
+  .nav-btn{
+    width:32px;height:32px; background:transparent; border:none;
+    color:#3E7C59; font-size:20px; border-radius:50%;
+  }
+  .month-title{ font-size:15px; font-weight:700; color:#2f4d3a; }
+
+  .legend{
+    display:flex; justify-content:center; gap:12px;
+    font-size:10.5px; color:var(--muted2); margin:6px 0 8px;
+  }
+  .legend span{ display:flex; align-items:center; gap:4px; }
+  .dot{ width:9px;height:9px;border-radius:3px;display:inline-block; }
+  .dot.green{ background:var(--green); }
+  .dot.blue{ background:var(--blue); }
+  .dot.empty{ background:#f0ece0; border:1px solid var(--border); }
+
+  .weekdays{
+    display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:4px;
+  }
+  .weekdays div{ text-align:center; font-size:9px; color:var(--muted); font-weight:600; }
+  .days-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .day-cell{
+    aspect-ratio:1/1;
+    border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700;
+    background:#f5f1e6; color:var(--ink); border:none;
+    position:relative; line-height:1.1;
+  }
+  .day-cell .qty{ font-size:8px; font-weight:500; opacity:0.85; margin-top:1px; }
+  .day-cell.future{ color:#cfc7b2; cursor:not-allowed; }
+  .day-cell.blank{ background:transparent; }
+  .day-cell.received{ background:var(--green); color:#fff; }
+  .day-cell.notreceived{ background:var(--blue); color:#fff; }
+  .day-cell.selected{ box-shadow:0 0 0 2px #2f4d3a; }
+  .day-cell.today:not(.selected){ box-shadow:0 0 0 1.5px #b7ab8c; }
+  .hint{ text-align:center; font-size:10.5px; color:#a89f8c; margin-top:8px; }
+
+  /* ---------- Quantity adjuster (for selected day) ---------- */
+  #qtyPanel{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    background:var(--header-bg);
+    border:1px solid var(--header-border);
+    border-radius:12px;
+    padding:10px 12px;
+    margin-top:10px;
+  }
+  #qtyPanel.active #qpDate{ color:#2f4d3a; }
+  .qp-row{ text-align:center; }
+  #qpDate{ font-size:12.5px; font-weight:700; color:var(--muted); }
+  .qty-controls{ display:flex; align-items:center; justify-content:center; gap:8px; }
+  .qty-step{
+    width:28px;height:28px; border-radius:50%;
+    border:1.5px solid var(--border); background:#fff;
+    color:#2f4d3a; font-size:16px; font-weight:700;
+  }
+  .qty-step:disabled{ opacity:0.4; }
+  #qtyPanel input{
+    width:52px; text-align:center; font-size:14px; font-weight:700;
+    padding:5px; border-radius:8px; border:1px solid var(--border); font-family:inherit;
+  }
+  #qtyPanel input:disabled{ background:#f0ece0; color:#b7ab8c; }
+  .qty-unit{ font-size:11px; color:var(--muted2); }
+  .qty-presets{ display:flex; justify-content:center; gap:6px; }
+  .qty-presets button{
+    font-size:11px; padding:5px 10px; border-radius:7px;
+    border:1px solid var(--border); background:#fff; color:var(--muted2); font-family:inherit;
+  }
+  .qty-presets button:disabled{ opacity:0.4; }
+  .qty-presets button.active-preset{ background:var(--green); border-color:var(--green); color:#fff; }
+
+  /* ---------- Hisab tab: payments ---------- */
+  .section-title{
+    font-size:15px; font-weight:700; color:#2f4d3a;
+    margin:0 0 10px; font-family:'Noto Nastaliq Urdu', serif;
+  }
+  .pay-form{ display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .pay-form input[type="number"]{ width:80px; flex:0 0 auto; font-size:13px; padding:7px 8px; border-radius:8px; border:1px solid var(--border); font-family:inherit; }
+  .pay-form input[type="text"]{ flex:1; min-width:90px; font-size:13px; padding:7px 8px; border-radius:8px; border:1px solid var(--border); font-family:inherit; }
+  .pay-form button{ flex:0 0 auto; font-size:12px; padding:7px 14px; border-radius:8px; border:none; background:#3E7C59; color:#fff; }
+
+  .payment-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; }
+  .payment-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--bg); border-radius:9px; padding:7px 10px; font-size:13px;
+  }
+  .payment-item .amt{ font-weight:700; color:#2f4d3a; }
+  .payment-item .meta{ font-size:10px; color:var(--muted); margin-top:1px; }
+  .del-btn{ background:none; border:none; color:var(--danger); font-size:11px; padding:3px 6px; }
+  .empty-note{ text-align:center; color:#a89f8c; font-size:13px; padding:8px 0; }
+
+  /* ---------- Hisab tab: summary ---------- */
+  .summary-card{
+    background:#2f4d3a; color:#fff; border-radius:14px; padding:14px; margin-bottom:12px;
+  }
+  .summary-card h2{ margin:0 0 8px; font-size:15px; font-family:'Noto Nastaliq Urdu', serif; }
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat-box{ background:rgba(255,255,255,0.1); border-radius:10px; padding:8px 10px; }
+  .stat-box .label{ font-size:10px; color:rgba(255,255,255,0.7); }
+  .stat-box .value{ font-size:18px; font-weight:700; margin-top:2px; }
+  .total-box{
+    margin-top:8px; background:rgba(255,255,255,0.15); border-radius:10px;
+    padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:13px;
+  }
+  .total-box .val{ font-size:16px; font-weight:800; }
+
+  .balance-card{
+    background:var(--header-bg); border:1px solid var(--header-border);
+    border-radius:14px; padding:14px;
+  }
+  .balance-card h2{ margin:0 0 8px; font-size:15px; color:#2f4d3a; font-family:'Noto Nastaliq Urdu', serif; }
+  .balance-row{ display:flex; justify-content:space-between; font-size:13px; padding:4px 0; color:var(--muted2); }
+  .balance-row .v{ font-weight:600; color:var(--ink); }
+  .divider{ height:1px; background:var(--header-border); margin:6px 0; }
+  .final-row{ display:flex; justify-content:space-between; align-items:center; font-size:14px; }
+  .final-row .label{ font-weight:700; color:#2f4d3a; }
+  .final-row .amt{ font-weight:800; font-size:16px; }
+  .amt.due{ color:var(--danger); }
+  .amt.clear{ color:var(--green); }
+
+  /* ---------- History tab ---------- */
+  .history-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .history-item{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+  }
+  .history-item .h-top{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;
+  }
+  .history-item .h-month{ font-size:14px; font-weight:700; color:#2f4d3a; }
+  .badge{
+    font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px;
+  }
+  .badge.paid{ background:#e4f3ea; color:var(--green); }
+  .badge.unpaid{ background:#fbe9e6; color:var(--danger); }
+  .history-item .h-stats{
+    display:flex; justify-content:space-between; font-size:12.5px; color:var(--muted2); margin-bottom:8px;
+  }
+  .history-item .h-stats b{ color:var(--ink); }
+  .h-toggle-btn{
+    width:100%; font-size:12px; font-weight:600; padding:7px; border-radius:8px; border:1.5px solid var(--border);
+    background:#fff; color:var(--muted2);
+  }
+  .h-toggle-btn.is-paid{ background:var(--green); border-color:var(--green); color:#fff; }
+  .h-toggle-btn.is-unpaid{ background:var(--blue); border-color:var(--blue); color:#fff; }
+
+  #toast{
+    position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+    background:#2f4d3a; color:#fff; font-size:13px;
+    padding:8px 16px; border-radius:999px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.2);
+    opacity:0; pointer-events:none; transition:opacity .25s;
+    white-space:nowrap; z-index:50;
+  }
+  #toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1 class="nastaliq">دودھ کا حساب کتاب</h1>
+    <p class="login-sub">اپنی ای میل سے لاگ ان کریں</p>
+    <input type="email" id="loginEmail" placeholder="ای میل ایڈریس" autocomplete="email">
+    <input type="password" id="loginPassword" placeholder="پاس ورڈ" autocomplete="current-password">
+    <div id="authError"></div>
+    <button id="loginBtn" class="auth-btn primary">لاگ ان کریں</button>
+    <button id="signupBtn" class="auth-btn secondary">نیا اکاؤنٹ بنائیں</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appScreen">
+
+<header>
+  <div class="header-top">
+    <h1>دودھ کا حساب کتاب</h1>
+    <button id="logoutBtn">لاگ آؤٹ</button>
+  </div>
+  <div class="price-row">
+    <label>فی کلو قیمت (روپے)</label>
+    <input type="number" id="priceInput" inputmode="decimal" value="55">
+    <button id="savePriceBtn">محفوظ کریں</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="calendar">کیلنڈر</button>
+  <button class="tab-btn" data-tab="hisab">حساب</button>
+  <button class="tab-btn" data-tab="history">ہسٹری</button>
+</div>
+
+<main>
+
+  <!-- CALENDAR TAB -->
+  <div class="tab-panel active" id="tab-calendar">
+    <div class="card" style="padding:6px 8px;">
+      <div class="month-nav">
+        <button class="nav-btn" id="nextMonthBtn">‹</button>
+        <div class="month-title" id="monthTitle"></div>
+        <button class="nav-btn" id="prevMonthBtn">›</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot green"></span> دودھ ملا</span>
+      <span><span class="dot blue"></span> نہیں ملا</span>
+      <span><span class="dot empty"></span> نشان نہیں</span>
+    </div>
+
+    <div class="card">
+      <div class="weekdays">
+        <div>اتوار</div><div>پیر</div><div>منگل</div><div>بدھ</div><div>جمعرات</div><div>جمعہ</div><div>ہفتہ</div>
+      </div>
+      <div class="days-grid" id="daysGrid"></div>
+      <p class="hint">دن پر کلک کریں: خالی → دودھ ملا (سبز) → نہیں ملا (نیلا) → خالی</p>
+
+      <div id="qtyPanel">
+        <div class="qp-row">
+          <span id="qpDate">دن منتخب کریں تاکہ مقدار سیٹ کریں</span>
+        </div>
+        <div class="qty-controls">
+          <span class="qty-unit">مقدار (کلو)</span>
+          <button class="qty-step" id="qtyMinus">−</button>
+          <input type="number" id="qtyInput" step="0.5" min="0.5" value="1" disabled>
+          <button class="qty-step" id="qtyPlus">+</button>
+        </div>
+        <div class="qty-presets">
+          <button type="button" data-qty="1">١ کلو</button>
+          <button type="button" data-qty="1.5">١.۵ کلو (ایکسٹرا)</button>
+          <button type="button" data-qty="2">٢ کلو</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISAB TAB (payments + summary combined) -->
+  <div class="tab-panel" id="tab-hisab">
+    <div class="card">
+      <h2 class="section-title">ادائیگی درج کریں</h2>
+      <div class="pay-form">
+        <input type="number" id="payAmount" inputmode="decimal" placeholder="رقم">
+        <input type="text" id="payNote" placeholder="نوٹ (اختیاری)">
+        <button id="addPaymentBtn">درج کریں</button>
+      </div>
+      <ul class="payment-list" id="paymentList"></ul>
+    </div>
+
+    <div class="summary-card">
+      <h2 id="summaryTitle">اس مہینے کا خلاصہ</h2>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="label">دودھ ملنے کے دن</div>
+          <div class="value" id="statReceivedDays">۰</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">کل مقدار (کلو)</div>
+          <div class="value" id="statQty">۰</div>
+        </div>
+      </div>
+      <div class="total-box">
+        <span>اس مہینے کی رقم</span>
+        <span class="val" id="statTotal">۰ روپے</span>
+      </div>
+    </div>
+
+    <div class="balance-card">
+      <h2>مجموعی بیلنس</h2>
+      <div class="balance-row"><span>کل مقدار (کلو)</span><span class="v" id="balQty">۰</span></div>
+      <div class="balance-row"><span>کل بنتی رقم</span><span class="v" id="balDue">۰ روپے</span></div>
+      <div class="balance-row"><span>کل ادا شدہ رقم</span><span class="v" id="balPaid">۰ روپے</span></div>
+      <div class="divider"></div>
+      <div class="final-row">
+        <span class="label">باقی رقم</span>
+        <span class="amt" id="balFinal">۰ روپے</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-panel" id="tab-history">
+    <div class="card">
+      <h2 class="section-title">مہینہ وار ہسٹری</h2>
+      <ul class="history-list" id="historyList"></ul>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+</div><!-- /#appScreen -->
+
+<script>
+  // ---------- Firebase ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBgzWNgELrW8KeISSA7jIktmg1i9khvpvc",
+    authDomain: "milk-tracker-26f19.firebaseapp.com",
+    projectId: "milk-tracker-26f19",
+    storageBucket: "milk-tracker-26f19.firebasestorage.app",
+    messagingSenderId: "285291439645",
+    appId: "1:285291439645:web:80180f938528f4db6f88f4"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let currentUser = null;
+
+  function urduAuthError(code){
+    const map = {
+      'auth/invalid-email': 'ای میل درست نہیں ہے',
+      'auth/user-not-found': 'یہ ای میل رجسٹر نہیں ہے، نیا اکاؤنٹ بنائیں',
+      'auth/wrong-password': 'پاس ورڈ غلط ہے',
+      'auth/invalid-credential': 'ای میل یا پاس ورڈ غلط ہے',
+      'auth/email-already-in-use': 'یہ ای میل پہلے سے رجسٹر ہے، لاگ ان کریں',
+      'auth/weak-password': 'پاس ورڈ کم از کم ۶ حروف کا ہو',
+      'auth/missing-password': 'پاس ورڈ درج کریں',
+      'auth/network-request-failed': 'انٹرنیٹ کنکشن چیک کریں'
+    };
+    return map[code] || 'کچھ مسئلہ ہوا، دوبارہ کوشش کریں';
+  }
+
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const authError = document.getElementById('authError');
+  const loginBtn = document.getElementById('loginBtn');
+  const signupBtn = document.getElementById('signupBtn');
+  const loginScreen = document.getElementById('loginScreen');
+  const appScreen = document.getElementById('appScreen');
+
+  function setAuthBusy(busy){
+    loginBtn.disabled = busy;
+    signupBtn.disabled = busy;
+  }
+
+  loginBtn.addEventListener('click', async ()=>{
+    authError.textContent = '';
+    const email = loginEmail.value.trim();
+    const pass = loginPassword.value;
+    if(!email || !pass){ authError.textContent = 'ای میل اور پاس ورڈ درج کریں'; return; }
+    setAuthBusy(true);
+    try{
+      await auth.signInWithEmailAndPassword(email, pass);
+    }catch(e){
+      authError.textContent = urduAuthError(e.code);
+    }
+    setAuthBusy(false);
+  });
+
+  signupBtn.addEventListener('click', async ()=>{
+    authError.textContent = '';
+    const email = loginEmail.value.trim();
+    const pass = loginPassword.value;
+    if(!email || !pass){ authError.textContent = 'ای میل اور پاس ورڈ درج کریں'; return; }
+    setAuthBusy(true);
+    try{
+      await auth.createUserWithEmailAndPassword(email, pass);
+    }catch(e){
+      authError.textContent = urduAuthError(e.code);
+    }
+    setAuthBusy(false);
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+    await auth.signOut();
+  });
+
+  async function loadUserData(){
+    const snap = await db.collection('users').doc(currentUser.uid).get();
+    if(snap.exists){
+      const data = snap.data();
+      days = data.days || {};
+      price = data.price || 55;
+      payments = data.payments || [];
+      paidMonths = data.paidMonths || {};
+    } else {
+      days = {}; price = 55; payments = []; paidMonths = {};
+      await persist();
+    }
+    priceInput.value = price;
+  }
+
+  async function persist(){
+    if(!currentUser) return;
+    try{
+      await db.collection('users').doc(currentUser.uid).set({ days, price, payments, paidMonths });
+    }catch(e){
+      showToast('محفوظ نہیں ہو سکا، انٹرنیٹ چیک کریں');
+    }
+  }
+
+  auth.onAuthStateChanged(async (user)=>{
+    if(user){
+      currentUser = user;
+      loginScreen.style.display = 'none';
+      appScreen.classList.add('show');
+      await loadUserData();
+      renderAll();
+    } else {
+      currentUser = null;
+      appScreen.classList.remove('show');
+      loginScreen.style.display = 'flex';
+      loginPassword.value = '';
+      authError.textContent = '';
+    }
+  });
+
+  // ---------- Utilities ----------
+  const URDU_MONTHS = ["جنوری","فروری","مارچ","اپریل","مئی","جون","جولائی","اگست","ستمبر","اکتوبر","نومبر","دسمبر"];
+  const digitMap = {0:'۰',1:'۱',2:'۲',3:'۳',4:'۴',5:'۵',6:'۶',7:'۷',8:'۸',9:'۹'};
+  function toUrdu(num){ return String(num).replace(/[0-9]/g, d => digitMap[d]); }
+  function fmtQty(n){ const s = (Math.round(n*100)/100).toString(); return toUrdu(s); }
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+  function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+
+  // ---------- State ----------
+  // days[key] = { status: 'received'|'missed', qty: number }
+  let days = {};
+  let price = 55;
+  let payments = [];
+  let paidMonths = {}; // { "YYYY-MM": true }
+
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth();
+  let selectedKey = null;
+
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> t.classList.remove('show'), 1500);
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab === 'history') renderHistory();
+    });
+  });
+
+  // ---------- Price ----------
+  const priceInput = document.getElementById('priceInput');
+  priceInput.value = price;
+  function savePrice(){
+    const v = parseFloat(priceInput.value);
+    if(isNaN(v) || v <= 0){
+      showToast('درست قیمت درج کریں');
+      priceInput.value = price;
+      return;
+    }
+    price = v;
+    persist();
+    showToast('قیمت محفوظ ہو گئی');
+    renderAll();
+  }
+  document.getElementById('savePriceBtn').addEventListener('click', savePrice);
+
+  // ---------- Month navigation ----------
+  document.getElementById('prevMonthBtn').addEventListener('click', ()=>{
+    if(viewMonth === 0){ viewMonth = 11; viewYear--; } else { viewMonth--; }
+    selectedKey = null;
+    updateQtyPanelUI();
+    renderCalendar();
+  });
+  document.getElementById('nextMonthBtn').addEventListener('click', ()=>{
+    if(viewMonth === 11){ viewMonth = 0; viewYear++; } else { viewMonth++; }
+    selectedKey = null;
+    updateQtyPanelUI();
+    renderCalendar();
+  });
+
+  // ---------- Quantity panel ----------
+  const qtyPanel = document.getElementById('qtyPanel');
+  const qpDate = document.getElementById('qpDate');
+  const qtyInput = document.getElementById('qtyInput');
+  const qtyMinusBtn = document.getElementById('qtyMinus');
+  const qtyPlusBtn = document.getElementById('qtyPlus');
+  const qtyPresetBtns = document.querySelectorAll('.qty-presets button');
+
+  function updateQtyPanelUI(){
+    const entry = selectedKey ? days[selectedKey] : null;
+    const isReceived = entry && entry.status === 'received';
+
+    if(!selectedKey){
+      qpDate.textContent = 'دن منتخب کریں تاکہ مقدار سیٹ کریں';
+    } else if(isReceived){
+      const [y,m,d] = selectedKey.split('-').map(Number);
+      qpDate.textContent = `${toUrdu(d)} ${URDU_MONTHS[m-1]} — مقدار سیٹ کریں`;
+    } else {
+      const [y,m,d] = selectedKey.split('-').map(Number);
+      qpDate.textContent = `${toUrdu(d)} ${URDU_MONTHS[m-1]} — پہلے "دودھ ملا" نشان لگائیں`;
+    }
+
+    qtyInput.disabled = !isReceived;
+    qtyMinusBtn.disabled = !isReceived;
+    qtyPlusBtn.disabled = !isReceived;
+    qtyPresetBtns.forEach(b => b.disabled = !isReceived);
+
+    qtyInput.value = isReceived ? (entry.qty || 1) : 1;
+
+    qtyPresetBtns.forEach(b=>{
+      const match = isReceived && Math.abs(parseFloat(b.dataset.qty) - (entry.qty || 1)) < 0.001;
+      b.classList.toggle('active-preset', match);
+    });
+  }
+
+  function updateQty(newQty){
+    if(!selectedKey || !days[selectedKey] || days[selectedKey].status !== 'received') return;
+    const v = Math.max(0.5, Math.round(newQty*2)/2);
+    days[selectedKey] = { status:'received', qty: v };
+    persist();
+    updateQtyPanelUI();
+    renderCalendar();
+  }
+  qtyInput.addEventListener('change', ()=>{
+    const v = parseFloat(qtyInput.value);
+    if(isNaN(v) || v <= 0){ updateQty(1); }
+    else updateQty(v);
+  });
+  qtyMinusBtn.addEventListener('click', ()=>{
+    updateQty(parseFloat(qtyInput.value || 1) - 0.5);
+  });
+  qtyPlusBtn.addEventListener('click', ()=>{
+    updateQty(parseFloat(qtyInput.value || 1) + 0.5);
+  });
+  qtyPresetBtns.forEach(b=>{
+    b.addEventListener('click', ()=> updateQty(parseFloat(b.dataset.qty)));
+  });
+
+  // ---------- Day click cycle ----------
+  function cycleDay(key, y, m, d){
+    const current = days[key];
+    if(!current){
+      days[key] = { status:'received', qty:1 };
+    } else if(current.status === 'received'){
+      days[key] = { status:'missed', qty:0 };
+    } else {
+      delete days[key];
+    }
+    persist();
+
+    selectedKey = key;
+    renderAll();
+  }
+
+
+  // ---------- Calendar rendering ----------
+  function isFuture(y,m,d){
+    const dt = new Date(y,m,d);
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return dt > t;
+  }
+  function isToday(y,m,d){
+    return y===today.getFullYear() && m===today.getMonth() && d===today.getDate();
+  }
+
+  function renderCalendar(){
+    document.getElementById('monthTitle').textContent = `${URDU_MONTHS[viewMonth]} ${toUrdu(viewYear)}`;
+    document.getElementById('summaryTitle').textContent = `${URDU_MONTHS[viewMonth]} کا خلاصہ`;
+
+    const grid = document.getElementById('daysGrid');
+    grid.innerHTML = '';
+
+    const firstOfMonth = new Date(viewYear, viewMonth, 1);
+    const startWeekday = firstOfMonth.getDay();
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+
+    for(let i=0;i<startWeekday;i++){
+      const blank = document.createElement('div');
+      blank.className = 'day-cell blank';
+      grid.appendChild(blank);
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const key = dateKey(viewYear, viewMonth, d);
+      const entry = days[key];
+      const future = isFuture(viewYear, viewMonth, d);
+
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'day-cell';
+
+      const numSpan = document.createElement('div');
+      numSpan.textContent = toUrdu(d);
+      cell.appendChild(numSpan);
+
+      if(future){
+        cell.classList.add('future');
+        cell.disabled = true;
+      } else if(entry && entry.status === 'received'){
+        cell.classList.add('received');
+        const q = document.createElement('div');
+        q.className = 'qty';
+        q.textContent = fmtQty(entry.qty || 1);
+        cell.appendChild(q);
+      } else if(entry && entry.status === 'missed'){
+        cell.classList.add('notreceived');
+      }
+      if(key === selectedKey) cell.classList.add('selected');
+      else if(isToday(viewYear, viewMonth, d)) cell.classList.add('today');
+
+      if(!future){
+        cell.addEventListener('click', ()=> cycleDay(key, viewYear, viewMonth, d));
+      }
+      grid.appendChild(cell);
+    }
+
+    renderMonthSummary(daysInMonth);
+  }
+
+  function renderMonthSummary(daysInMonth){
+    let receivedDays = 0, qtyTotal = 0;
+    for(let d=1; d<=daysInMonth; d++){
+      const key = dateKey(viewYear, viewMonth, d);
+      const entry = days[key];
+      if(entry && entry.status === 'received'){
+        receivedDays++;
+        qtyTotal += entry.qty || 1;
+      }
+    }
+    document.getElementById('statReceivedDays').textContent = toUrdu(receivedDays);
+    document.getElementById('statQty').textContent = fmtQty(qtyTotal);
+    document.getElementById('statTotal').textContent = `${toUrdu(Math.round(qtyTotal * price))} روپے`;
+  }
+
+  // ---------- Payments ----------
+  const payAmountInput = document.getElementById('payAmount');
+  const payNoteInput = document.getElementById('payNote');
+
+  function addPayment(){
+    const raw = payAmountInput.value.trim();
+    const v = parseFloat(raw);
+    if(raw === '' || isNaN(v) || v <= 0){
+      showToast('درست رقم درج کریں');
+      return;
+    }
+    const entry = {
+      id: Date.now(),
+      date: new Date().toISOString().slice(0,10),
+      amount: v,
+      note: payNoteInput.value.trim()
+    };
+    payments.unshift(entry);
+    persist();
+    payAmountInput.value = '';
+    payNoteInput.value = '';
+    showToast('ادائیگی درج ہو گئی');
+    renderPayments();
+    renderBalance();
+  }
+  document.getElementById('addPaymentBtn').addEventListener('click', addPayment);
+  [payAmountInput, payNoteInput].forEach(el=>{
+    el.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); addPayment(); }
+    });
+  });
+
+  function removePayment(id){
+    payments = payments.filter(p => p.id !== id);
+    persist();
+    renderPayments();
+    renderBalance();
+  }
+
+  function renderPayments(){
+    const list = document.getElementById('paymentList');
+    list.innerHTML = '';
+    if(payments.length === 0){
+      const li = document.createElement('li');
+      li.className = 'empty-note';
+      li.textContent = 'ابھی تک کوئی ادائیگی درج نہیں';
+      list.appendChild(li);
+      return;
+    }
+    payments.forEach(p=>{
+      const li = document.createElement('li');
+      li.className = 'payment-item';
+      li.innerHTML = `
+        <div>
+          <div class="amt">${toUrdu(p.amount)} روپے</div>
+          <div class="meta">${p.date}${p.note ? ' — ' + p.note : ''}</div>
+        </div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'del-btn';
+      btn.textContent = 'حذف کریں';
+      btn.addEventListener('click', ()=> removePayment(p.id));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- Overall balance ----------
+  function renderBalance(){
+    let qtyTotal = 0;
+    Object.values(days).forEach(entry=>{
+      if(entry && entry.status === 'received') qtyTotal += entry.qty || 1;
+    });
+    const totalDue = Math.round(qtyTotal * price);
+    const totalPaid = payments.reduce((s,p)=> s + p.amount, 0);
+    const balance = totalDue - totalPaid;
+
+    document.getElementById('balQty').textContent = fmtQty(qtyTotal);
+    document.getElementById('balDue').textContent = `${toUrdu(totalDue)} روپے`;
+    document.getElementById('balPaid').textContent = `${toUrdu(totalPaid)} روپے`;
+
+    const finalEl = document.getElementById('balFinal');
+    if(balance > 0){
+      finalEl.textContent = `${toUrdu(balance)} روپے (دینا ہے)`;
+      finalEl.className = 'amt due';
+    } else if(balance < 0){
+      finalEl.textContent = `${toUrdu(Math.abs(balance))} روپے (زائد ادا)`;
+      finalEl.className = 'amt clear';
+    } else {
+      finalEl.textContent = `۰ روپے (برابر)`;
+      finalEl.className = 'amt clear';
+    }
+  }
+
+  // ---------- History (month-wise) ----------
+  function monthLabel(ym){
+    const [y, m] = ym.split('-').map(Number);
+    return `${URDU_MONTHS[m-1]} ${toUrdu(y)}`;
+  }
+
+  function togglePaidMonth(ym){
+    paidMonths[ym] = !paidMonths[ym];
+    persist();
+    renderHistory();
+  }
+
+  function renderHistory(){
+    // Aggregate qty per month from `days`
+    const monthTotals = {}; // { "YYYY-MM": {qty, receivedDays} }
+    Object.keys(days).forEach(key=>{
+      const entry = days[key];
+      if(entry && entry.status === 'received'){
+        const ym = key.slice(0,7);
+        if(!monthTotals[ym]) monthTotals[ym] = { qty:0, receivedDays:0 };
+        monthTotals[ym].qty += entry.qty || 1;
+        monthTotals[ym].receivedDays += 1;
+      }
+    });
+
+    const months = Object.keys(monthTotals).sort().reverse();
+    const list = document.getElementById('historyList');
+    list.innerHTML = '';
+
+    if(months.length === 0){
+      const li = document.createElement('li');
+      li.className = 'empty-note';
+      li.textContent = 'ابھی تک کوئی ریکارڈ موجود نہیں';
+      list.appendChild(li);
+      return;
+    }
+
+    months.forEach(ym=>{
+      const data = monthTotals[ym];
+      const amount = Math.round(data.qty * price);
+      const isPaid = !!paidMonths[ym];
+
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      li.innerHTML = `
+        <div class="h-top">
+          <span class="h-month">${monthLabel(ym)}</span>
+          <span class="badge ${isPaid ? 'paid' : 'unpaid'}">${isPaid ? 'ادا شدہ' : 'باقی'}</span>
+        </div>
+        <div class="h-stats">
+          <span>دن: <b>${toUrdu(data.receivedDays)}</b></span>
+          <span>مقدار: <b>${fmtQty(data.qty)} کلو</b></span>
+          <span>رقم: <b>${toUrdu(amount)} روپے</b></span>
+        </div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'h-toggle-btn ' + (isPaid ? 'is-paid' : 'is-unpaid');
+      btn.textContent = isPaid ? 'ادا شدہ — واپس باقی کریں' : 'ادا شدہ نشان لگائیں';
+      btn.addEventListener('click', ()=> togglePaidMonth(ym));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- Render all ----------
+  function renderAll(){
+    renderCalendar();
+    renderPayments();
+    renderBalance();
+    updateQtyPanelUI();
+  }
+
+</script>
+</body>
+</html>
